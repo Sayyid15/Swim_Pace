@@ -1,15 +1,15 @@
-import React, { useCallback, useState } from 'react';
-import { View, StyleSheet, Text, FlatList } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, StyleSheet, Text, FlatList, Alert } from 'react-native';
 import { Button, Chip, Menu, Provider } from 'react-native-paper';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, addDoc, Timestamp, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 
 const Swimming = () => {
     const router = useRouter();
 
     const [swimmers, setSwimmers] = useState<string[]>([]);
-    const distances = ["15m", "25m", "50m", "100m", "200m"];
+    const distances = ["15 m", "25 m", "50 m", "100 m", "200 m"];
     const strokes = ["Butterfly", "Backstroke", "Breaststroke", "Freestyle"];
 
     const [showSwimmersMenu, setShowSwimmersMenu] = useState(false);
@@ -18,6 +18,8 @@ const Swimming = () => {
     const [selectedSwimmers, setSelectedSwimmers] = useState<string[]>([]);
     const [selectedDistance, setSelectedDistance] = useState<string | null>(null);
     const [swimmerStrokes, setSwimmerStrokes] = useState<Record<string, string>>({});
+
+    const [presets, setPresets] = useState<any[]>([]);
 
     useFocusEffect(
         useCallback(() => {
@@ -35,10 +37,24 @@ const Swimming = () => {
                 }
             };
 
+            const fetchPresets = async () => {
+                try {
+                    const querySnapshot = await getDocs(collection(db, 'heatPresets'));
+                    const results: any[] = [];
+                    querySnapshot.forEach(doc => {
+                        results.push({ id: doc.id, ...doc.data() });
+                    });
+                    setPresets(results);
+                } catch (error) {
+                    console.error('Error fetching presets:', error);
+                }
+            };
+
             setSelectedSwimmers([]);
             setSelectedDistance(null);
             setSwimmerStrokes({});
             fetchSwimmers();
+            fetchPresets();
         }, [])
     );
 
@@ -53,6 +69,38 @@ const Swimming = () => {
     const selectStroke = (swimmer: string, stroke: string) => {
         setSwimmerStrokes(prev => ({ ...prev, [swimmer]: stroke }));
         setShowStrokeMenu(null);
+    };
+
+    const savePreset = async () => {
+        try {
+            await addDoc(collection(db, 'heatPresets'), {
+                distance: selectedDistance,
+                swimmers: selectedSwimmers,
+                strokes: swimmerStrokes,
+                timestamp: Timestamp.now(),
+            });
+            Alert.alert('Saved', 'Heat preset saved successfully!');
+            setSelectedSwimmers([]);
+            setSelectedDistance(null);
+            setSwimmerStrokes({});
+        } catch (error) {
+            console.error('Error saving preset:', error);
+            Alert.alert('Error', 'Failed to save heat preset.');
+        }
+    };
+
+    const loadPreset = async (preset: any) => {
+        setSelectedSwimmers(preset.swimmers);
+        setSelectedDistance(preset.distance);
+        setSwimmerStrokes(preset.strokes);
+
+        // Delete the preset after loading it
+        try {
+            await deleteDoc(doc(db, 'heatPresets', preset.id));
+            setPresets(prev => prev.filter(p => p.id !== preset.id));
+        } catch (error) {
+            console.error('Error deleting preset:', error);
+        }
     };
 
     return (
@@ -171,6 +219,33 @@ const Swimming = () => {
                 >
                     Start Heat
                 </Button>
+
+                <Button
+                    mode="contained"
+                    style={styles.presetButton}
+                    disabled={selectedSwimmers.length === 0 || !selectedDistance}
+                    onPress={savePreset}
+                >
+                    Save as Heat Preset
+                </Button>
+
+                <View style={styles.section}>
+                    <Text style={styles.header}>Presets</Text>
+                    {presets.length > 0 ? (
+                        presets.map((preset) => (
+                            <Button
+                                key={preset.id}
+                                mode="outlined"
+                                style={{ marginBottom: 8 }}
+                                onPress={() => loadPreset(preset)}
+                            >
+                                {preset.distance} - {preset.swimmers.join(', ')}
+                            </Button>
+                        ))
+                    ) : (
+                        <Text style={styles.emptyText}>No presets saved</Text>
+                    )}
+                </View>
             </View>
         </Provider>
     );
@@ -234,6 +309,12 @@ const styles = StyleSheet.create({
     startButton: {
         marginTop: 20,
         backgroundColor: '#4CAF50',
+        height: 45,
+        justifyContent: 'center',
+    },
+    presetButton: {
+        marginTop: 12,
+        backgroundColor: '#FF9800',
         height: 45,
         justifyContent: 'center',
     },

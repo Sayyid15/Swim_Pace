@@ -9,7 +9,7 @@ export default function Home() {
     return (
         <SafeAreaView style={styles.home}>
             <Image
-                source={require("../../assets/images/swimPace.png")}
+                source={require("../../../assets/images/swimPace.png")}
                 style={styles.logo}
             />
 

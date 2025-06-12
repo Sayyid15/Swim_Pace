@@ -1,29 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, TextInput, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { createUserWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/config/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { setDoc, doc } from 'firebase/firestore';
+import { auth, db } from '@/config/firebase';
 import { useRouter } from 'expo-router';
 
 export default function Register() {
+    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const router = useRouter();
 
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (user) {
-                router.replace('/home');
-            }
-        });
-        return unsubscribe;
-    }, []);
-
     const handleRegister = async () => {
         try {
-            await createUserWithEmailAndPassword(auth, email, password);
+            const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+            const user = userCredential.user;
+
+            await setDoc(doc(db, 'users', user.uid), {
+                name: name,
+                email: user.email,
+                role: 'swimmer'
+            });
+
+            await setDoc(doc(db, 'swimmers', user.uid), {
+                name: name
+            });
+
             alert('Account created successfully');
-            router.replace('/home');
+            router.replace({ pathname: '/(swimmer)/(tabs)/home' });
         } catch (err: any) {
             setError(err.message);
         }
@@ -35,7 +40,13 @@ export default function Register() {
                 source={require("../../assets/images/swimPace.png")}
                 style={styles.logo}
             />
-
+            <TextInput
+                placeholder="Name"
+                value={name}
+                onChangeText={setName}
+                style={styles.input}
+                placeholderTextColor="#999"
+            />
             <TextInput
                 placeholder="Email"
                 value={email}
@@ -53,24 +64,16 @@ export default function Register() {
                 placeholderTextColor="#999"
                 secureTextEntry
             />
-
             {error !== '' && <Text style={styles.error}>{error}</Text>}
-
-            <TouchableOpacity
-                style={styles.button}
-                onPress={handleRegister}
-                activeOpacity={0.8}
-            >
+            <TouchableOpacity style={styles.button} onPress={handleRegister} activeOpacity={0.8}>
                 <Text style={styles.buttonText}>Register</Text>
             </TouchableOpacity>
-
             <Text style={styles.link} onPress={() => router.push('/(auth)/login')}>
                 Already have an account? Login
             </Text>
         </View>
     );
 }
-
 
 const styles = StyleSheet.create({
     container: {
@@ -101,11 +104,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 32,
         borderRadius: 12,
         marginTop: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        elevation: 5,
     },
     buttonText: {
         color: '#FFFFFF',
@@ -125,4 +123,3 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
 });
-

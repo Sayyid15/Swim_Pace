@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
+import {Provider} from "react-native-paper";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -18,16 +19,26 @@ export default function RootLayout() {
   }
 
   return (
+      <Provider>
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)/(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)/home" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)/heat" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)/register" options={{ headerShown: false }} />
+        <Stack>
+          {/* Auth flow */}
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+
+          {/* Coach tab flow */}
+          <Stack.Screen name="(coach)" options={{ headerShown: false }} />
+
+          {/* Swimmer tab flow */}
+          <Stack.Screen name="(swimmer)" options={{ headerShown: false }} />
+
+          {/* Optional fallback */}
+          <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
+        </Stack>
+
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
+      </Provider>
   );
 }

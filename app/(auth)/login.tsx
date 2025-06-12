@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, TextInput, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/config/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '@/config/firebase';
 import { useRouter } from 'expo-router';
 
 export default function Login() {
@@ -10,20 +11,34 @@ export default function Login() {
     const [error, setError] = useState('');
     const router = useRouter();
 
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (user) {
-                router.replace('/home');
-            }
-        });
-        return unsubscribe;
-    }, []);
-
     const handleLogin = async () => {
         try {
-            await signInWithEmailAndPassword(auth, email, password);
-            alert('Login successful');
-            router.replace('/home');
+            const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
+            const user = userCredential.user;
+
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDoc = await getDoc(userDocRef);
+
+            if (!userDoc.exists()) {
+                setError("Gebruiker bestaat niet in Firestore.");
+                return;
+            }
+
+            const role = userDoc.data()?.role;
+
+            if (!role) {
+                setError("Geen rol toegekend. Neem contact op met de beheerder.");
+                return;
+            }
+
+            if (role === 'coach') {
+                router.replace('/(coach)/(tabs)/home');
+            } else if (role === 'swimmer') {
+                router.replace('/(swimmer)/(tabs)/home');
+            } else {
+                setError("Ongeldige rol. Neem contact op met de beheerder.");
+            }
+
         } catch (err: any) {
             setError(err.message);
         }
@@ -31,10 +46,7 @@ export default function Login() {
 
     return (
         <View style={styles.container}>
-            <Image
-                source={require("../../assets/images/swimPace.png")}
-                style={styles.logo}
-            />
+            <Image source={require('../../assets/images/swimPace.png')} style={styles.logo} />
             <TextInput
                 placeholder="Email"
                 value={email}
@@ -53,21 +65,16 @@ export default function Login() {
                 secureTextEntry
             />
             {error !== '' && <Text style={styles.error}>{error}</Text>}
-
-            <TouchableOpacity
-                style={styles.button}
-                onPress={handleLogin}
-                activeOpacity={0.8}
-            >
+            <TouchableOpacity style={styles.button} onPress={handleLogin} activeOpacity={0.8}>
                 <Text style={styles.buttonText}>Login</Text>
             </TouchableOpacity>
-
             <Text style={styles.link} onPress={() => router.push('/(auth)/register')}>
-                Don't have an account? Register
+                {"Don't have an account? Register"}
             </Text>
         </View>
     );
 }
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -97,11 +104,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 32,
         borderRadius: 12,
         marginTop: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        elevation: 5,
     },
     buttonText: {
         color: '#FFFFFF',
