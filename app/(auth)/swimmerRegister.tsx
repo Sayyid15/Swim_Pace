@@ -5,7 +5,7 @@ import { setDoc, doc } from 'firebase/firestore';
 import { auth, db } from '@/config/firebase';
 import { useRouter } from 'expo-router';
 
-export default function Register() {
+export default function SwimmerRegister() {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -17,18 +17,15 @@ export default function Register() {
             const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
             const user = userCredential.user;
 
-            await setDoc(doc(db, 'users', user.uid), {
+            // Save swimmer directly in swimmers collection
+            await setDoc(doc(db, 'swimmers', user.uid), {
                 name: name,
                 email: user.email,
-                role: 'swimmer'
-            });
-
-            await setDoc(doc(db, 'swimmers', user.uid), {
-                name: name
+                role: 'swimmer',
             });
 
             alert('Account created successfully');
-            router.replace({ pathname: '/(swimmer)/(tabs)/home' });
+            router.replace({ pathname: '/(swimmer)/(tabs)' });
         } catch (err: any) {
             setError(err.message);
         }
@@ -68,7 +65,7 @@ export default function Register() {
             <TouchableOpacity style={styles.button} onPress={handleRegister} activeOpacity={0.8}>
                 <Text style={styles.buttonText}>Register</Text>
             </TouchableOpacity>
-            <Text style={styles.link} onPress={() => router.push('/(auth)/login')}>
+            <Text style={styles.link} onPress={() => router.push('/(auth)')}>
                 Already have an account? Login
             </Text>
         </View>

@@ -18,7 +18,7 @@ const Settings = () => {
     const handleLogout = async () => {
         try {
             await signOut(auth);
-            router.replace("/(auth)/login");
+            router.replace("/(auth)");
         } catch (error) {
             Alert.alert("Logout Error", "Something went wrong.");
         }
@@ -29,7 +29,7 @@ const Settings = () => {
             try {
                 await deleteUser(user);
                 Alert.alert("Account Deleted", "Your account has been removed.");
-                router.replace("/(auth)/register");
+                router.replace("/(auth)/swimmerRegister");
             } catch (error) {
                 Alert.alert("Delete Error", "Could not delete account.");
             }

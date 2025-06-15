@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { db } from '@/config/firebase';
-import { Heat } from "@/.expo/types/screens";
+import { Heat } from '@/.expo/types/screens'; // adjust if type location differs
 
 export default function SwimmerHome() {
     const [stats, setStats] = useState<Heat[]>([]);
@@ -17,55 +17,47 @@ export default function SwimmerHome() {
             if (!user) return;
 
             const q = query(collection(db, 'heats'), orderBy('timestamp', 'desc'));
-            const querySnapshot = await getDocs(q);
+            const snapshot = await getDocs(q);
 
-            const data: Heat[] = querySnapshot.docs.map(doc => {
+            const results: Heat[] = snapshot.docs.map(doc => {
                 const raw = doc.data();
                 return {
                     id: doc.id,
                     date: raw.date,
                     timestamp: raw.timestamp,
+                    distance: raw.distance,
                     swimmers: raw.swimmers || [],
                 };
-            });
+            }).filter((heat) =>
+                heat.swimmers.some((entry: any) =>
+                    entry.email?.toLowerCase() === user.email?.toLowerCase()
+                )
+            ).map((heat) => ({
+                ...heat,
+                swimmers: heat.swimmers.filter(
+                    (entry: any) =>
+                        entry.email?.toLowerCase() === user.email?.toLowerCase()
+                )
+            }));
 
-            const filtered = data.map(heat => {
-                const swimmerEntries = heat.swimmers.filter((entry) => {
-                    const matchEmail = entry.email?.toLowerCase().trim() === user.email?.toLowerCase().trim();
-                    const matchName = entry.name?.toLowerCase().trim() === user.displayName?.toLowerCase().trim();
-                    return matchEmail || matchName;
-                });
-
-                return swimmerEntries.length > 0
-                    ? { ...heat, swimmers: swimmerEntries }
-                    : null;
-            }).filter(Boolean) as Heat[];
-
-            setStats(filtered);
+            setStats(results);
         };
 
         fetchStats();
     }, []);
 
-    const formatDate = (iso: string) => new Date(iso).toLocaleDateString();
-
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Most recent stats</Text>
+            <Text style={styles.title}>Your Swim Stats</Text>
             <FlatList
                 data={stats}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
                     <TouchableOpacity
                         style={styles.item}
-                        onPress={() =>
-                            router.push({
-                                pathname: '/(swimmer)/stats/[id]',
-                                params: { id: item.id },
-                            })
-                        }
+                        onPress={() => router.push({ pathname: '/(swimmer)/stats/[id]', params: { id: item.id } })}
                     >
-                        <Text style={styles.itemText}>Stats {formatDate(item.date)}</Text>
+                        <Text style={styles.itemText}>Stats {new Date(item.date).toLocaleDateString()}</Text>
                         <Text style={styles.arrow}>›</Text>
                     </TouchableOpacity>
                 )}

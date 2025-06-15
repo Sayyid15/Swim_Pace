@@ -9,9 +9,9 @@ import { db } from '@/config/firebase';
 export default function HeatScreen() {
     const router = useRouter();
     const { swimmers, distance, strokes } = useLocalSearchParams();
+    const swimmerList: string[] = JSON.parse(decodeURIComponent(Array.isArray(swimmers) ? swimmers[0] : swimmers || '[]'));
+    const strokeMap: Record<string, string> = JSON.parse(decodeURIComponent(Array.isArray(strokes) ? strokes[0] : strokes || '{}'));
 
-    const swimmerList = JSON.parse(decodeURIComponent(swimmers || '[]'));
-    const strokeMap = JSON.parse(decodeURIComponent(strokes || '{}'));
     const selectedDistance = distance || '--';
 
     const [elapsedMs, setElapsedMs] = useState(0);
@@ -22,53 +22,42 @@ export default function HeatScreen() {
     const [openDropdowns, setOpenDropdowns] = useState<Record<number, boolean>>({});
     const [swimmerEmails, setSwimmerEmails] = useState<Record<string, string>>({});
 
-    const intervalRef = useRef<NodeJS.Timer | null>(null);
+    const intervalRef = useRef<number | null>(null); // ✅ FIXED TYPE
 
     useEffect(() => {
         const fetchSwimmerEmails = async () => {
             const snapshot = await getDocs(collection(db, 'swimmers'));
-            const emailMap: Record<string, string> = {};
+            const map: Record<string, string> = {};
             snapshot.forEach(doc => {
                 const data = doc.data();
                 if (data.name && data.email) {
-                    emailMap[data.name] = data.email;
+                    map[data.name] = data.email;
                 }
             });
-            setSwimmerEmails(emailMap);
+            setSwimmerEmails(map);
         };
-
         fetchSwimmerEmails();
     }, []);
 
     useEffect(() => {
         if (isRunning) {
             const start = Date.now() - elapsedMs;
-            intervalRef.current = setInterval(() => {
-                setElapsedMs(Date.now() - start);
-            }, 10);
-        } else if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
+            intervalRef.current = window.setInterval(() => setElapsedMs(Date.now() - start), 10); // ✅ FIXED
+        } else if (intervalRef.current !== null) {
+            clearInterval(intervalRef.current); // ✅ FIXED
         }
-
         return () => {
-            if (intervalRef.current) clearInterval(intervalRef.current);
+            if (intervalRef.current !== null) clearInterval(intervalRef.current); // ✅ FIXED
         };
     }, [isRunning]);
-
     const formatTime = (ms: number): string => {
-        const minutes = Math.floor(ms / 60000);
-        const seconds = Math.floor((ms % 60000) / 1000);
-        const centiseconds = Math.floor((ms % 1000) / 10);
-        const pad = (n: number) => n.toString().padStart(2, '0');
-        return `${pad(minutes)}:${pad(seconds)},${pad(centiseconds)}`;
+        const min = Math.floor(ms / 60000);
+        const sec = Math.floor((ms % 60000) / 1000);
+        const cs = Math.floor((ms % 1000) / 10);
+        return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')},${cs.toString().padStart(2, '0')}`;
     };
 
-    const handleLap = () => {
-        const time = formatTime(elapsedMs);
-        setLaps((prev) => [...prev, time]);
-    };
-
+    const handleLap = () => setLaps(prev => [...prev, formatTime(elapsedMs)]);
     const handleReset = () => {
         setIsRunning(false);
         setElapsedMs(0);
@@ -81,100 +70,98 @@ export default function HeatScreen() {
     const handleSaveHeat = async () => {
         const swimmersWithDetails: any[] = [];
 
-        laps.forEach((time, lapIndex) => {
-            const assignedSwimmers = lapAssignments[lapIndex] || [];
-            assignedSwimmers.forEach((name) => {
+        laps.forEach((time, index) => {
+            (lapAssignments[index] || []).forEach((name) => {
+                const email = swimmerEmails[name];
+                if (!email) return;
                 swimmersWithDetails.push({
                     name,
-                    email: swimmerEmails[name] || null,
+                    email,
                     stroke: strokeMap[name] || '',
                     time,
-                    feedback: feedbacks[`${lapIndex}-${name}`] || '',
+                    feedback: feedbacks[`${index}-${name}`] || '',
                 });
             });
         });
 
-        console.log('Saving swimmersWithDetails:', swimmersWithDetails);
-
-        if (swimmersWithDetails.length === 0) {
-            Alert.alert('Geen gegevens', 'Voeg minstens één zwemmer toe aan een tijd.');
+        if (!swimmersWithDetails.length) {
+            Alert.alert('Geen gegevens', 'Geen valide zwemmers gevonden met e-mailadres.');
             return;
         }
 
         try {
-            const now = new Date();
             await addDoc(collection(db, 'heats'), {
                 distance: selectedDistance,
                 timestamp: Timestamp.now(),
-                date: now.toISOString(),
+                date: new Date().toISOString(),
                 swimmers: swimmersWithDetails,
             });
-
             Alert.alert('Opgeslagen', 'Heat succesvol opgeslagen!');
             router.push('/swimming');
-        } catch (error) {
-            console.error('Error saving heat:', error);
+        } catch (err) {
             Alert.alert('Fout', 'Heat kon niet worden opgeslagen.');
         }
     };
 
     return (
         <View style={styles.container}>
-            <Button icon="arrow-left" onPress={() => router.back()} style={{ marginTop: 40 }}>
+            <Button icon="arrow-left" onPress={() => router.back()} style={styles.backButton}>
                 Terug
             </Button>
 
             <Text style={styles.timer}>{formatTime(elapsedMs)}</Text>
 
             <View style={styles.controls}>
-                <Button mode="contained" onPress={() => setIsRunning(!isRunning)} style={styles.startStop}>
+                <Button mode="contained" onPress={() => setIsRunning(!isRunning)} style={styles.start}>
                     {isRunning ? 'Stop' : 'Start'}
                 </Button>
-
                 <Button mode="contained" onPress={handleLap} disabled={!isRunning}>
                     Lap
                 </Button>
-
                 <Button mode="contained" onPress={handleReset}>
                     Reset
                 </Button>
             </View>
 
-            <Text style={styles.lapHeader}>Tijden & Zwemmers</Text>
+            <Text style={styles.header}>Tijden & Zwemmers</Text>
 
             <FlatList
                 data={laps}
-                keyExtractor={(_, index) => index.toString()}
+                keyExtractor={(_, i) => i.toString()}
                 renderItem={({ item, index }) => (
-                    <View style={styles.lapRow}>
-                        <Text style={styles.lapLabel}>Lap {index + 1} - {item}</Text>
+                    <View style={styles.lapBlock}>
+                        <Text style={styles.lapText}>Lap {index + 1} - {item}</Text>
 
                         <DropDownPicker
                             open={openDropdowns[index] || false}
                             value={lapAssignments[index] || []}
-                            items={swimmerList.map((s) => ({ label: s, value: s }))}
-                            setOpen={(open) => setOpenDropdowns((prev) => ({ ...prev, [index]: open }))}
-                            setValue={(callback) => {
-                                const newValue = callback(lapAssignments[index] || []);
-                                setLapAssignments((prev) => ({ ...prev, [index]: newValue }));
+                            items={swimmerList.map((s: string) => ({ label: s, value: s }))}
+                            setOpen={(value) => {
+                                setOpenDropdowns((prev) => ({
+                                    ...prev,
+                                    [index]: typeof value === 'function' ? value(prev[index] ?? false) : value,
+                                }));
                             }}
-                            multiple={true}
-                            min={0}
-                            max={swimmerList.length}
+                            setValue={(cb) => {
+                                const val = cb(lapAssignments[index] || []);
+                                setLapAssignments(prev => ({ ...prev, [index]: val }));
+                            }}
+                            multiple
                             placeholder="Selecteer zwemmers"
                             style={{ marginBottom: 10 }}
                         />
 
-                        {(lapAssignments[index] || []).map((swimmer) => (
-                            <View key={swimmer} style={styles.feedbackRow}>
-                                <Text style={styles.swimmerName}>{swimmer}</Text>
+
+                        {(lapAssignments[index] || []).map((name) => (
+                            <View key={name} style={styles.feedbackRow}>
+                                <Text style={styles.name}>{name}</Text>
                                 <TextInput
                                     placeholder="Feedback"
                                     placeholderTextColor="#888"
-                                    style={styles.feedbackInput}
-                                    value={feedbacks[`${index}-${swimmer}`] || ''}
+                                    style={styles.input}
+                                    value={feedbacks[`${index}-${name}`] || ''}
                                     onChangeText={(text) =>
-                                        setFeedbacks((prev) => ({ ...prev, [`${index}-${swimmer}`]: text }))
+                                        setFeedbacks(prev => ({ ...prev, [`${index}-${name}`]: text }))
                                     }
                                 />
                             </View>
@@ -183,7 +170,7 @@ export default function HeatScreen() {
                 )}
             />
 
-            <Button mode="contained" style={{ marginTop: 30, backgroundColor: '#4CAF50' }} onPress={handleSaveHeat}>
+            <Button mode="contained" style={styles.save} onPress={handleSaveHeat}>
                 Save Heat
             </Button>
         </View>
@@ -191,39 +178,34 @@ export default function HeatScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#1A1A2E',
-        padding: 20,
-    },
+    container: { flex: 1, backgroundColor: '#1A1A2E', padding: 20 },
+    backButton: { marginTop: 40 },
     timer: {
         fontSize: 48,
         fontWeight: 'bold',
+        color: '#FFF',
         textAlign: 'center',
         marginVertical: 30,
-        color: '#FFFFFF',
     },
     controls: {
         flexDirection: 'row',
         justifyContent: 'space-around',
         marginBottom: 30,
     },
-    startStop: {
-        backgroundColor: '#4CAF50',
-    },
-    lapHeader: {
+    start: { backgroundColor: '#4CAF50' },
+    header: {
         fontSize: 22,
         fontWeight: 'bold',
-        color: '#FFFFFF',
+        color: '#FFF',
         marginBottom: 10,
     },
-    lapRow: {
+    lapBlock: {
         backgroundColor: '#e0f7fa',
         borderRadius: 8,
         padding: 12,
         marginBottom: 16,
     },
-    lapLabel: {
+    lapText: {
         fontSize: 16,
         fontWeight: 'bold',
         marginBottom: 8,
@@ -233,16 +215,17 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 8,
     },
-    swimmerName: {
-        fontSize: 16,
-        flex: 1,
-    },
-    feedbackInput: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 6,
-        padding: 6,
+    name: { flex: 1, fontSize: 16 },
+    input: {
         flex: 2,
         marginLeft: 8,
         fontSize: 14,
+        backgroundColor: '#FFF',
+        borderRadius: 6,
+        padding: 6,
+    },
+    save: {
+        marginTop: 30,
+        backgroundColor: '#4CAF50',
     },
 });

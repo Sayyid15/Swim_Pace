@@ -1,44 +1,38 @@
 import React, { useState } from 'react';
-import { View, TextInput, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { View, TextInput, Text, StyleSheet, TouchableOpacity, Alert, Image } from 'react-native';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { setDoc, doc } from 'firebase/firestore';
 import { auth, db } from '@/config/firebase';
 import { useRouter } from 'expo-router';
 
-export default function Login() {
+export default function CoachRegister() {
+    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [secretCode, setSecretCode] = useState('');
     const [error, setError] = useState('');
     const router = useRouter();
 
-    const handleLogin = async () => {
+    const handleRegister = async () => {
+        const COACH_SECRET_CODE = "JOINSWIMPACE";
+
+        if (secretCode.trim() !== COACH_SECRET_CODE) {
+            setError("Ongeldige toegangscode.");
+            return;
+        }
+
         try {
-            const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
+            const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
             const user = userCredential.user;
 
-            const userDocRef = doc(db, 'users', user.uid);
-            const userDoc = await getDoc(userDocRef);
+            await setDoc(doc(db, 'coaches', user.uid), {
+                name: name,
+                email: user.email,
+                role: 'coach',
+            });
 
-            if (!userDoc.exists()) {
-                setError("Gebruiker bestaat niet in Firestore.");
-                return;
-            }
-
-            const role = userDoc.data()?.role;
-
-            if (!role) {
-                setError("Geen rol toegekend. Neem contact op met de beheerder.");
-                return;
-            }
-
-            if (role === 'coach') {
-                router.replace('/(coach)/(tabs)/home');
-            } else if (role === 'swimmer') {
-                router.replace('/(swimmer)/(tabs)/home');
-            } else {
-                setError("Ongeldige rol. Neem contact op met de beheerder.");
-            }
-
+            Alert.alert('Coach account aangemaakt');
+            router.replace('/(coach)/(tabs)');
         } catch (err: any) {
             setError(err.message);
         }
@@ -46,15 +40,22 @@ export default function Login() {
 
     return (
         <View style={styles.container}>
-            <Image source={require('../../assets/images/swimPace.png')} style={styles.logo} />
+            <Image source={require("../../assets/images/swimPace.png")} style={styles.logo} />
+            <TextInput
+                placeholder="Name"
+                value={name}
+                onChangeText={setName}
+                style={styles.input}
+                placeholderTextColor="#999"
+            />
             <TextInput
                 placeholder="Email"
                 value={email}
                 onChangeText={setEmail}
                 style={styles.input}
                 placeholderTextColor="#999"
-                autoCapitalize="none"
                 keyboardType="email-address"
+                autoCapitalize="none"
             />
             <TextInput
                 placeholder="Password"
@@ -64,12 +65,20 @@ export default function Login() {
                 placeholderTextColor="#999"
                 secureTextEntry
             />
+            <TextInput
+                placeholder="Secret Coach Code"
+                value={secretCode}
+                onChangeText={setSecretCode}
+                style={styles.input}
+                placeholderTextColor="#999"
+                secureTextEntry
+            />
             {error !== '' && <Text style={styles.error}>{error}</Text>}
-            <TouchableOpacity style={styles.button} onPress={handleLogin} activeOpacity={0.8}>
-                <Text style={styles.buttonText}>Login</Text>
+            <TouchableOpacity style={styles.button} onPress={handleRegister}>
+                <Text style={styles.buttonText}>Register as Coach</Text>
             </TouchableOpacity>
-            <Text style={styles.link} onPress={() => router.push('/(auth)/register')}>
-                {"Don't have an account? Register"}
+            <Text style={styles.link} onPress={() => router.push('/(auth)')}>
+                Already have an account? Login
             </Text>
         </View>
     );
@@ -99,7 +108,7 @@ const styles = StyleSheet.create({
         marginBottom: 15,
     },
     button: {
-        backgroundColor: '#00BFFF',
+        backgroundColor: '#FF9800',
         paddingVertical: 14,
         paddingHorizontal: 32,
         borderRadius: 12,
@@ -119,7 +128,6 @@ const styles = StyleSheet.create({
     link: {
         marginTop: 20,
         color: '#2196F3',
-        textAlign: 'center',
         fontSize: 14,
     },
 });

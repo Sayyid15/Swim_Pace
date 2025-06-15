@@ -12,43 +12,47 @@ export default function Stats() {
 
     useEffect(() => {
         const fetchData = async () => {
-            const docRef = doc(db, 'heats', id);
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-                const heatData = docSnap.data();
-                const auth = getAuth();
-                const user = auth.currentUser;
+            const docRef = doc(db, 'heats', id!);
+            const snap = await getDoc(docRef);
+            if (!snap.exists()) return;
 
-                const filteredSwimmers = heatData.swimmers?.filter(
-                    (entry: any) => entry.email === user?.email
-                );
+            const auth = getAuth();
+            const user = auth.currentUser;
+            const fullData = snap.data();
 
-                setData({ ...heatData, swimmers: filteredSwimmers });
-            }
+            const filtered = fullData.swimmers?.filter(
+                (entry: any) => entry.email?.toLowerCase() === user?.email?.toLowerCase()
+            );
+
+            setData({ ...fullData, swimmers: filtered });
         };
 
         fetchData();
     }, []);
 
-    if (!data) return <Text style={styles.loading}>Loading...</Text>;
+    if (!data || !data.swimmers) return <Text style={styles.loading}>Loading...</Text>;
 
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Stats {new Date(data.date).toLocaleDateString()}</Text>
-            {data.swimmers.map((entry: any, index: number) => (
-                <View key={index} style={styles.card}>
-                    <View style={styles.headerRow}>
-                        <Text style={styles.distance}>{data.distance} {entry.stroke}</Text>
-                        <Text style={styles.time}>{entry.time}</Text>
+            {data.swimmers.length === 0 ? (
+                <Text style={styles.feedback}>Geen resultaten gevonden</Text>
+            ) : (
+                data.swimmers.map((entry: any, index: number) => (
+                    <View key={index} style={styles.card}>
+                        <View style={styles.headerRow}>
+                            <Text style={styles.distance}>{data.distance} {entry.stroke}</Text>
+                            <Text style={styles.time}>{entry.time}</Text>
+                        </View>
+                        <TouchableOpacity onPress={() => setExpandedIndex(index === expandedIndex ? null : index)}>
+                            <Text style={styles.feedbackToggle}>Feedback {expandedIndex === index ? '▲' : '▼'}</Text>
+                        </TouchableOpacity>
+                        {expandedIndex === index && (
+                            <Text style={styles.feedback}>{entry.feedback || 'No feedback provided'}</Text>
+                        )}
                     </View>
-                    <TouchableOpacity onPress={() => setExpandedIndex(index === expandedIndex ? null : index)}>
-                        <Text style={styles.feedbackToggle}>Feedback {expandedIndex === index ? '▲' : '▼'}</Text>
-                    </TouchableOpacity>
-                    {expandedIndex === index && (
-                        <Text style={styles.feedback}>{entry.feedback || 'No feedback provided'}</Text>
-                    )}
-                </View>
-            ))}
+                ))
+            )}
         </View>
     );
 }
