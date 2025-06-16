@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { View, TextInput, Text, StyleSheet, TouchableOpacity, Alert, Image } from 'react-native';
+import {
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    TouchableWithoutFeedback,
+    Keyboard,
+ View, TextInput, Text, StyleSheet, TouchableOpacity, Alert, Image } from 'react-native';
+
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { setDoc, doc } from 'firebase/firestore';
 import { auth, db } from '@/config/firebase';
@@ -32,56 +39,35 @@ export default function CoachRegister() {
             });
 
             Alert.alert('Coach account aangemaakt');
-            router.replace('/(coach)/(tabs)');
+            router.replace('/(coach)');
         } catch (err: any) {
             setError(err.message);
         }
     };
 
     return (
-        <View style={styles.container}>
-            <Image source={require("../../assets/images/swimPace.png")} style={styles.logo} />
-            <TextInput
-                placeholder="Name"
-                value={name}
-                onChangeText={setName}
-                style={styles.input}
-                placeholderTextColor="#999"
-            />
-            <TextInput
-                placeholder="Email"
-                value={email}
-                onChangeText={setEmail}
-                style={styles.input}
-                placeholderTextColor="#999"
-                keyboardType="email-address"
-                autoCapitalize="none"
-            />
-            <TextInput
-                placeholder="Password"
-                value={password}
-                onChangeText={setPassword}
-                style={styles.input}
-                placeholderTextColor="#999"
-                secureTextEntry
-            />
-            <TextInput
-                placeholder="Secret Coach Code"
-                value={secretCode}
-                onChangeText={setSecretCode}
-                style={styles.input}
-                placeholderTextColor="#999"
-                secureTextEntry
-            />
-            {error !== '' && <Text style={styles.error}>{error}</Text>}
-            <TouchableOpacity style={styles.button} onPress={handleRegister}>
-                <Text style={styles.buttonText}>Register as Coach</Text>
-            </TouchableOpacity>
-            <Text style={styles.link} onPress={() => router.push('/(auth)')}>
-                Already have an account? Login
-            </Text>
-        </View>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+                    <View style={styles.container}>
+                        <Image source={require("../../assets/images/swimPace.png")} style={styles.logo} />
+                        <TextInput placeholder="Name" value={name} onChangeText={setName} style={styles.input} placeholderTextColor="#999" />
+                        <TextInput placeholder="Email" value={email} onChangeText={setEmail} style={styles.input} placeholderTextColor="#999" keyboardType="email-address" autoCapitalize="none" />
+                        <TextInput placeholder="Password" value={password} onChangeText={setPassword} style={styles.input} placeholderTextColor="#999" secureTextEntry />
+                        <TextInput placeholder="Coach Code" value={secretCode} onChangeText={setSecretCode} style={styles.input} placeholderTextColor="#999" secureTextEntry />
+                        {error !== '' && <Text style={styles.error}>{error}</Text>}
+                        <TouchableOpacity style={styles.button} onPress={handleRegister}>
+                            <Text style={styles.buttonText}>Register as Coach</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.link} onPress={() => router.push('/(auth)')}>
+                            Already have an account? Login
+                        </Text>
+                    </View>
+                </ScrollView>
+            </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
     );
+
 }
 
 const styles = StyleSheet.create({
@@ -130,4 +116,11 @@ const styles = StyleSheet.create({
         color: '#2196F3',
         fontSize: 14,
     },
+    scrollContainer: {
+        flexGrow: 1,
+        justifyContent: 'center',
+        paddingHorizontal: 20,
+        backgroundColor: '#1A1A2E',
+    },
+
 });

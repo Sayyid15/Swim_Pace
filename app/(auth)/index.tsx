@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { View, TextInput, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import {
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    TouchableWithoutFeedback,
+    Keyboard,
+ View, TextInput, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/config/firebase';
@@ -18,12 +24,12 @@ export default function Login() {
 
             const swimmerDoc = await getDoc(doc(db, 'swimmers', uid));
             if (swimmerDoc.exists() && swimmerDoc.data()?.role === 'swimmer') {
-                return router.replace('/(swimmer)/(tabs)');
+                return router.replace('/(swimmer)');
             }
 
             const coachDoc = await getDoc(doc(db, 'coaches', uid));
             if (coachDoc.exists() && coachDoc.data()?.role === 'coach') {
-                return router.replace('/(coach)/');
+                return router.replace('/(coach)');
             }
 
             setError('Geen geldige rol gevonden.');
@@ -33,18 +39,25 @@ export default function Login() {
     };
 
     return (
-        <View style={styles.container}>
-            <Image source={require('../../assets/images/swimPace.png')} style={styles.logo} />
-            <TextInput placeholder="Email" style={styles.input} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" placeholderTextColor="#999" />
-            <TextInput placeholder="Password" style={styles.input} value={password} onChangeText={setPassword} secureTextEntry placeholderTextColor="#999" />
-            {!!error && <Text style={styles.error}>{error}</Text>}
-            <TouchableOpacity style={styles.button} onPress={handleLogin}>
-                <Text style={styles.buttonText}>Login</Text>
-            </TouchableOpacity>
-            <Text style={styles.link} onPress={() => router.push('/(auth)/swimmerRegister')}>Register as Swimmer</Text>
-            <Text style={styles.link} onPress={() => router.push('/(auth)/coachRegister')}>Register as Coach</Text>
-        </View>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+                    <View style={styles.container}>
+                        <Image source={require('../../assets/images/swimPace.png')} style={styles.logo} />
+                        <TextInput placeholder="Email" style={styles.input} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" placeholderTextColor="#999" />
+                        <TextInput placeholder="Password" style={styles.input} value={password} onChangeText={setPassword} secureTextEntry placeholderTextColor="#999" />
+                        {!!error && <Text style={styles.error}>{error}</Text>}
+                        <TouchableOpacity style={styles.button} onPress={handleLogin}>
+                            <Text style={styles.buttonText}>Login</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.link} onPress={() => router.push('/(auth)/swimmerRegister')}>Register as Swimmer</Text>
+                        <Text style={styles.link} onPress={() => router.push('/(auth)/coachRegister')}>Register as Coach</Text>
+                    </View>
+                </ScrollView>
+            </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
     );
+
 }
 
 const styles = StyleSheet.create({
@@ -92,4 +105,11 @@ const styles = StyleSheet.create({
         color: '#2196F3',
         fontSize: 14,
     },
+    scrollContainer: {
+        flexGrow: 1,
+        justifyContent: 'center',
+        paddingHorizontal: 20,
+        backgroundColor: '#1A1A2E',
+    },
+
 });

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, StyleSheet, Text, FlatList, Alert } from 'react-native';
 import { Button, Chip, Menu, Provider } from 'react-native-paper';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -9,8 +9,8 @@ const Swimming = () => {
     const router = useRouter();
 
     const [swimmers, setSwimmers] = useState<string[]>([]);
-    const distances = ["15 m", "25 m", "50 m", "100 m", "200 m"];
-    const strokes = ["Butterfly", "Backstroke", "Breaststroke", "Freestyle"];
+    const distances = ['15 m', '25 m', '50 m', '100 m', '200 m'];
+    const strokes = ['Butterfly', 'Backstroke', 'Breaststroke', 'Freestyle'];
 
     const [showSwimmersMenu, setShowSwimmersMenu] = useState(false);
     const [showDistanceMenu, setShowDistanceMenu] = useState(false);
@@ -18,8 +18,22 @@ const Swimming = () => {
     const [selectedSwimmers, setSelectedSwimmers] = useState<string[]>([]);
     const [selectedDistance, setSelectedDistance] = useState<string | null>(null);
     const [swimmerStrokes, setSwimmerStrokes] = useState<Record<string, string>>({});
-
     const [presets, setPresets] = useState<any[]>([]);
+
+    // ✅ fetchPresets moved out of useFocusEffect
+    const fetchPresets = async () => {
+        try {
+            const querySnapshot = await getDocs(collection(db, 'heatPresets'));
+            const results: any[] = [];
+            querySnapshot.forEach((doc) => {
+                results.push({ id: doc.id, ...doc.data() });
+            });
+            results.sort((a, b) => b.timestamp?.seconds - a.timestamp?.seconds); // newest first
+            setPresets(results);
+        } catch (error) {
+            console.error('Error fetching presets:', error);
+        }
+    };
 
     useFocusEffect(
         useCallback(() => {
@@ -27,26 +41,13 @@ const Swimming = () => {
                 try {
                     const querySnapshot = await getDocs(collection(db, 'swimmers'));
                     const names: string[] = [];
-                    querySnapshot.forEach(doc => {
+                    querySnapshot.forEach((doc) => {
                         const data = doc.data();
                         if (data.name) names.push(data.name);
                     });
                     setSwimmers(names);
                 } catch (error) {
                     console.error('Error fetching swimmers:', error);
-                }
-            };
-
-            const fetchPresets = async () => {
-                try {
-                    const querySnapshot = await getDocs(collection(db, 'heatPresets'));
-                    const results: any[] = [];
-                    querySnapshot.forEach(doc => {
-                        results.push({ id: doc.id, ...doc.data() });
-                    });
-                    setPresets(results);
-                } catch (error) {
-                    console.error('Error fetching presets:', error);
                 }
             };
 
@@ -59,15 +60,13 @@ const Swimming = () => {
     );
 
     const toggleSwimmer = (swimmer: string) => {
-        setSelectedSwimmers(prev =>
-            prev.includes(swimmer)
-                ? prev.filter(s => s !== swimmer)
-                : [...prev, swimmer]
+        setSelectedSwimmers((prev) =>
+            prev.includes(swimmer) ? prev.filter((s) => s !== swimmer) : [...prev, swimmer]
         );
     };
 
     const selectStroke = (swimmer: string, stroke: string) => {
-        setSwimmerStrokes(prev => ({ ...prev, [swimmer]: stroke }));
+        setSwimmerStrokes((prev) => ({ ...prev, [swimmer]: stroke }));
         setShowStrokeMenu(null);
     };
 
@@ -83,6 +82,8 @@ const Swimming = () => {
             setSelectedSwimmers([]);
             setSelectedDistance(null);
             setSwimmerStrokes({});
+
+            await fetchPresets(); // ✅ refresh presets after save
         } catch (error) {
             console.error('Error saving preset:', error);
             Alert.alert('Error', 'Failed to save heat preset.');
@@ -94,10 +95,9 @@ const Swimming = () => {
         setSelectedDistance(preset.distance);
         setSwimmerStrokes(preset.strokes);
 
-        // Delete the preset after loading it
         try {
             await deleteDoc(doc(db, 'heatPresets', preset.id));
-            setPresets(prev => prev.filter(p => p.id !== preset.id));
+            setPresets((prev) => prev.filter((p) => p.id !== preset.id));
         } catch (error) {
             console.error('Error deleting preset:', error);
         }
@@ -112,12 +112,16 @@ const Swimming = () => {
                             visible={showSwimmersMenu}
                             onDismiss={() => setShowSwimmersMenu(false)}
                             anchor={
-                                <Button onPress={() => setShowSwimmersMenu(true)} style={styles.button} labelStyle={styles.buttonLabel}>
+                                <Button
+                                    onPress={() => setShowSwimmersMenu(true)}
+                                    style={styles.button}
+                                    labelStyle={styles.buttonLabel}
+                                >
                                     Select Swimmers
                                 </Button>
                             }
                         >
-                            {swimmers.map(swimmer => (
+                            {swimmers.map((swimmer) => (
                                 <Menu.Item
                                     key={swimmer}
                                     onPress={() => {
@@ -135,12 +139,16 @@ const Swimming = () => {
                             visible={showDistanceMenu}
                             onDismiss={() => setShowDistanceMenu(false)}
                             anchor={
-                                <Button onPress={() => setShowDistanceMenu(true)} style={styles.button} labelStyle={styles.buttonLabel}>
+                                <Button
+                                    onPress={() => setShowDistanceMenu(true)}
+                                    style={styles.button}
+                                    labelStyle={styles.buttonLabel}
+                                >
                                     Select Distance
                                 </Button>
                             }
                         >
-                            {distances.map(distance => (
+                            {distances.map((distance) => (
                                 <Menu.Item
                                     key={distance}
                                     onPress={() => {
@@ -162,29 +170,34 @@ const Swimming = () => {
                             keyExtractor={(item) => item}
                             renderItem={({ item }) => (
                                 <View style={styles.swimmerRow}>
-                                    <Chip style={styles.chip}>{item}</Chip>
-                                    <Menu
-                                        visible={showStrokeMenu === item}
-                                        onDismiss={() => setShowStrokeMenu(null)}
-                                        anchor={
-                                            <Button
-                                                mode="outlined"
-                                                onPress={() => setShowStrokeMenu(item)}
-                                                style={styles.strokeButton}
-                                                labelStyle={{ color: '#FFFFFF' }}
-                                            >
-                                                {swimmerStrokes[item] || "Select Stroke"}
-                                            </Button>
-                                        }
-                                    >
-                                        {strokes.map(stroke => (
-                                            <Menu.Item
-                                                key={stroke}
-                                                onPress={() => selectStroke(item, stroke)}
-                                                title={stroke}
-                                            />
-                                        ))}
-                                    </Menu>
+                                    <View style={styles.column}>
+                                        <Chip style={styles.chip}>{item}</Chip>
+                                    </View>
+                                    <View style={styles.column}>
+                                        <Menu
+                                            visible={showStrokeMenu === item}
+                                            onDismiss={() => setShowStrokeMenu(null)}
+                                            anchor={
+                                                <Button
+                                                    mode="outlined"
+                                                    onPress={() => setShowStrokeMenu(item)}
+                                                    style={styles.strokeButton}
+                                                    labelStyle={styles.strokeButtonLabel}
+                                                >
+                                                    {swimmerStrokes[item] || 'Select Stroke'}
+                                                </Button>
+                                            }
+                                            contentStyle={styles.menuContent}
+                                        >
+                                            {strokes.map((stroke) => (
+                                                <Menu.Item
+                                                    key={stroke}
+                                                    onPress={() => selectStroke(item, stroke)}
+                                                    title={stroke}
+                                                />
+                                            ))}
+                                        </Menu>
+                                    </View>
                                 </View>
                             )}
                         />
@@ -258,7 +271,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#1A1A2E',
     },
     buttonRow: {
-        marginTop:40,
+        marginTop: 40,
         flexDirection: 'row',
         justifyContent: 'space-between',
     },
@@ -286,18 +299,30 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 12,
+        gap: 12,
+    },
+    column: {
+        flex: 1,
     },
     chip: {
-        marginRight: 12,
         backgroundColor: '#2196F3',
-        paddingHorizontal: 12,
         borderRadius: 20,
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        justifyContent: 'center',
     },
     strokeButton: {
         borderColor: '#2196F3',
-        marginLeft: 10,
         height: 40,
-        paddingHorizontal: 8,
+        justifyContent: 'center',
+        borderRadius: 8,
+    },
+    strokeButtonLabel: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        textAlign: 'center',
+    },
+    menuContent: {
         borderRadius: 8,
     },
     emptyText: {

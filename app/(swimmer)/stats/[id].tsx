@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { db } from '@/config/firebase';
@@ -9,6 +9,7 @@ export default function Stats() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const [data, setData] = useState<any>(null);
     const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+    const router = useRouter();
 
     useEffect(() => {
         const fetchData = async () => {
@@ -28,13 +29,19 @@ export default function Stats() {
         };
 
         fetchData();
-    }, []);
+    }, [id]);
 
     if (!data || !data.swimmers) return <Text style={styles.loading}>Loading...</Text>;
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Stats {new Date(data.date).toLocaleDateString()}</Text>
+            <View style={styles.headerRow}>
+                <TouchableOpacity onPress={router.back}>
+                    <Text style={styles.goBack}>←</Text>
+                </TouchableOpacity>
+                <Text style={styles.title}>Stats {new Date(data.date).toLocaleDateString()}</Text>
+            </View>
+
             {data.swimmers.length === 0 ? (
                 <Text style={styles.feedback}>Geen resultaten gevonden</Text>
             ) : (
@@ -59,9 +66,10 @@ export default function Stats() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 20, backgroundColor: '#1A1A2E' },
-    title: { fontSize: 20, fontWeight: 'bold', marginBottom: 20 , color: '#fff' },
-    card: { backgroundColor: '#fff', borderRadius: 10, padding: 16, marginBottom: 10 },
-    headerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+    headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 10 },
+    goBack: { color: '#007AFF', fontSize: 16 ,marginTop:35},
+    title: { fontSize: 20, fontWeight: 'bold', color: '#fff' ,marginTop:35},
+    card: { backgroundColor: '#fff', borderRadius: 10, padding: 16, marginBottom: 10, marginTop:10 },
     distance: { fontWeight: 'bold' },
     time: { fontWeight: 'bold' },
     feedbackToggle: { color: '#007AFF', fontSize: 14 },

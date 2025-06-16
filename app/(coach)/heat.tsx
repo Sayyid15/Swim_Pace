@@ -22,8 +22,7 @@ export default function HeatScreen() {
     const [openDropdowns, setOpenDropdowns] = useState<Record<number, boolean>>({});
     const [swimmerEmails, setSwimmerEmails] = useState<Record<string, string>>({});
 
-    const intervalRef = useRef<number | null>(null); // ✅ FIXED TYPE
-
+    const intervalRef = useRef<number | null>(null);
     useEffect(() => {
         const fetchSwimmerEmails = async () => {
             const snapshot = await getDocs(collection(db, 'swimmers'));
@@ -42,14 +41,15 @@ export default function HeatScreen() {
     useEffect(() => {
         if (isRunning) {
             const start = Date.now() - elapsedMs;
-            intervalRef.current = window.setInterval(() => setElapsedMs(Date.now() - start), 10); // ✅ FIXED
+            intervalRef.current = window.setInterval(() => setElapsedMs(Date.now() - start), 10);
         } else if (intervalRef.current !== null) {
-            clearInterval(intervalRef.current); // ✅ FIXED
+            clearInterval(intervalRef.current);
         }
         return () => {
-            if (intervalRef.current !== null) clearInterval(intervalRef.current); // ✅ FIXED
+            if (intervalRef.current !== null) clearInterval(intervalRef.current);
         };
-    }, [isRunning]);
+    }, [elapsedMs, isRunning]);
+
     const formatTime = (ms: number): string => {
         const min = Math.floor(ms / 60000);
         const sec = Math.floor((ms % 60000) / 1000);
@@ -147,10 +147,20 @@ export default function HeatScreen() {
                                 setLapAssignments(prev => ({ ...prev, [index]: val }));
                             }}
                             multiple
+                            multipleText={`${lapAssignments[index]?.length || 0} zwemmer geselecteerd`}
+                            labelStyle={{ color: '#000' }}
                             placeholder="Selecteer zwemmers"
-                            style={{ marginBottom: 10 }}
+                            zIndex={1000}
+                            listMode="SCROLLVIEW"
                         />
 
+                        {lapAssignments[index]?.length > 0 && (
+                            <Text style={styles.selectedLabel}>
+                                {lapAssignments[index].length === 1
+                                    ? `1 zwemmer geselecteerd`
+                                    : `${lapAssignments[index].length} zwemmers geselecteerd`}
+                            </Text>
+                        )}
 
                         {(lapAssignments[index] || []).map((name) => (
                             <View key={name} style={styles.feedbackRow}>
@@ -227,5 +237,11 @@ const styles = StyleSheet.create({
     save: {
         marginTop: 30,
         backgroundColor: '#4CAF50',
+    },
+    selectedLabel: {
+        color: '#FFF',
+        fontSize: 14,
+        marginTop: 6,
+        marginBottom: 4,
     },
 });

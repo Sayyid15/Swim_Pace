@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
@@ -6,7 +7,7 @@ import { getAuth } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 
-export default function CoachHome() {
+export default function SwimmerHome() {
     const [name, setName] = useState('');
     const router = useRouter();
 
@@ -16,7 +17,7 @@ export default function CoachHome() {
             const user = auth.currentUser;
             if (!user) return;
 
-            const docRef = doc(db, 'coaches', user.uid);
+            const docRef = doc(db, 'swimmers', user.uid);
             const docSnap = await getDoc(docRef);
 
             if (docSnap.exists()) {
@@ -31,10 +32,10 @@ export default function CoachHome() {
         <SafeAreaView style={styles.container}>
             <Image source={require('../../assets/images/swimPace.png')} style={styles.logo} />
             <Text style={styles.title}>
-                {name ? `Welcome back, ${name}` : 'Welcome to SwimPace Coach'}
+                {name ? `Welcome back, ${name}` : 'Welcome to SwimPace'}
             </Text>
-            <TouchableOpacity style={styles.button} onPress={() => router.push('/swimming')}>
-                <Text style={styles.buttonText}>Get Started</Text>
+            <TouchableOpacity style={styles.button} onPress={() => router.push('/(swimmer)/(tabs)/stats')}>
+                <Text style={styles.buttonText}>View Stats</Text>
             </TouchableOpacity>
         </SafeAreaView>
     );

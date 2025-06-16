@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import { View, TextInput, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import {
+    View,
+    TextInput,
+    Text,
+    StyleSheet,
+    Image,
+    TouchableOpacity,
+    ScrollView,
+    TouchableWithoutFeedback,
+    KeyboardAvoidingView,
+    Platform, Keyboard
+} from 'react-native';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { setDoc, doc } from 'firebase/firestore';
 import { auth, db } from '@/config/firebase';
@@ -25,51 +36,64 @@ export default function SwimmerRegister() {
             });
 
             alert('Account created successfully');
-            router.replace({ pathname: '/(swimmer)/(tabs)' });
+            router.replace({ pathname: '/(swimmer)' });
         } catch (err: any) {
             setError(err.message);
         }
     };
 
     return (
-        <View style={styles.container}>
-            <Image
-                source={require("../../assets/images/swimPace.png")}
-                style={styles.logo}
-            />
-            <TextInput
-                placeholder="Name"
-                value={name}
-                onChangeText={setName}
-                style={styles.input}
-                placeholderTextColor="#999"
-            />
-            <TextInput
-                placeholder="Email"
-                value={email}
-                onChangeText={setEmail}
-                style={styles.input}
-                placeholderTextColor="#999"
-                autoCapitalize="none"
-                keyboardType="email-address"
-            />
-            <TextInput
-                placeholder="Password"
-                value={password}
-                onChangeText={setPassword}
-                style={styles.input}
-                placeholderTextColor="#999"
-                secureTextEntry
-            />
-            {error !== '' && <Text style={styles.error}>{error}</Text>}
-            <TouchableOpacity style={styles.button} onPress={handleRegister} activeOpacity={0.8}>
-                <Text style={styles.buttonText}>Register</Text>
-            </TouchableOpacity>
-            <Text style={styles.link} onPress={() => router.push('/(auth)')}>
-                Already have an account? Login
-            </Text>
-        </View>
+        <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <ScrollView
+                    contentContainerStyle={styles.scrollContainer}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <View style={styles.container}>
+                        <Image
+                            source={require('../../assets/images/swimPace.png')}
+                            style={styles.logo}
+                        />
+                        <TextInput
+                            placeholder="Name"
+                            value={name}
+                            onChangeText={setName}
+                            style={styles.input}
+                            placeholderTextColor="#999"
+                        />
+                        <TextInput
+                            placeholder="Email"
+                            value={email}
+                            onChangeText={setEmail}
+                            style={styles.input}
+                            placeholderTextColor="#999"
+                            autoCapitalize="none"
+                            keyboardType="email-address"
+                        />
+                        <TextInput
+                            placeholder="Password"
+                            value={password}
+                            onChangeText={setPassword}
+                            style={styles.input}
+                            placeholderTextColor="#999"
+                            secureTextEntry
+                        />
+                        {error !== '' && <Text style={styles.error}>{error}</Text>}
+                        <TouchableOpacity style={styles.button} onPress={handleRegister} activeOpacity={0.8}>
+                            <Text style={styles.buttonText}>Register</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.link} onPress={() => router.push('/(auth)')}>
+                            Already have an account? Login
+                        </Text>
+                    </View>
+                </ScrollView>
+            </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
     );
+
 }
 
 const styles = StyleSheet.create({
@@ -119,4 +143,11 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: 14,
     },
+    scrollContainer: {
+        flexGrow: 1,
+        justifyContent: 'center',
+        paddingHorizontal: 20,
+        backgroundColor: '#1A1A2E',
+    },
+
 });
