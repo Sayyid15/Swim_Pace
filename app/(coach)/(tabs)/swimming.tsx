@@ -20,7 +20,6 @@ const Swimming = () => {
     const [swimmerStrokes, setSwimmerStrokes] = useState<Record<string, string>>({});
     const [presets, setPresets] = useState<any[]>([]);
 
-    // ✅ fetchPresets moved out of useFocusEffect
     const fetchPresets = async () => {
         try {
             const querySnapshot = await getDocs(collection(db, 'heatPresets'));
@@ -28,7 +27,7 @@ const Swimming = () => {
             querySnapshot.forEach((doc) => {
                 results.push({ id: doc.id, ...doc.data() });
             });
-            results.sort((a, b) => b.timestamp?.seconds - a.timestamp?.seconds); // newest first
+            results.sort((a, b) => b.timestamp?.seconds - a.timestamp?.seconds);
             setPresets(results);
         } catch (error) {
             console.error('Error fetching presets:', error);
@@ -83,7 +82,7 @@ const Swimming = () => {
             setSelectedDistance(null);
             setSwimmerStrokes({});
 
-            await fetchPresets(); // ✅ refresh presets after save
+            await fetchPresets();
         } catch (error) {
             console.error('Error saving preset:', error);
             Alert.alert('Error', 'Failed to save heat preset.');
@@ -249,7 +248,7 @@ const Swimming = () => {
                             <Button
                                 key={preset.id}
                                 mode="outlined"
-                                style={{ marginBottom: 8 }}
+                                style={styles.presetChip}
                                 onPress={() => loadPreset(preset)}
                             >
                                 {preset.distance} - {preset.swimmers.join(', ')}
@@ -339,9 +338,15 @@ const styles = StyleSheet.create({
     },
     presetButton: {
         marginTop: 12,
-        backgroundColor: '#FF9800',
+        backgroundColor: '#F57C00',
         height: 45,
         justifyContent: 'center',
+    },
+    presetChip: {
+        marginBottom: 8,
+        backgroundColor: '#37474F',
+        borderColor: '#90CAF9',
+        borderWidth: 1,
     },
 });
 

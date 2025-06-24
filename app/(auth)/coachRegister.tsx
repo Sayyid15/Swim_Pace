@@ -11,6 +11,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { setDoc, doc } from 'firebase/firestore';
 import { auth, db } from '@/config/firebase';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 
 export default function CoachRegister() {
     const [name, setName] = useState('');
@@ -21,8 +22,8 @@ export default function CoachRegister() {
     const router = useRouter();
 
     const handleRegister = async () => {
-        const COACH_SECRET_CODE = "JOINSWIMPACE";
-
+        const config = Constants?.expoConfig as { extra?: { coachSecretCode?: string } };
+        const COACH_SECRET_CODE = config?.extra?.coachSecretCode || '';
         if (secretCode.trim() !== COACH_SECRET_CODE) {
             setError("Ongeldige toegangscode.");
             return;

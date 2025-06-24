@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { db } from '@/config/firebase';
-import { Heat } from '@/.expo/types/screens'; // adjust if type location differs
+import { Heat } from '@/.expo/types/screens';
 
 export default function SwimmerHome() {
     const [stats, setStats] = useState<Heat[]>([]);

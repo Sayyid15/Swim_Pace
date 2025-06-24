@@ -31,7 +31,7 @@ export default function CoachHome() {
         <SafeAreaView style={styles.container}>
             <Image source={require('../../assets/images/swimPace.png')} style={styles.logo} />
             <Text style={styles.title}>
-                {name ? `Welcome back, ${name}` : 'Welcome to SwimPace Coach'}
+                {name ? `Welcome Coach ${name}` : 'Welcome to SwimPace Coach'}
             </Text>
             <TouchableOpacity style={styles.button} onPress={() => router.push('/swimming')}>
                 <Text style={styles.buttonText}>Get Started</Text>

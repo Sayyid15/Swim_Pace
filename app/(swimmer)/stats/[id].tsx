@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { db } from '@/config/firebase';
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 export default function Stats() {
     const { id } = useLocalSearchParams<{ id: string }>();
@@ -52,7 +53,7 @@ export default function Stats() {
                             <Text style={styles.time}>{entry.time}</Text>
                         </View>
                         <TouchableOpacity onPress={() => setExpandedIndex(index === expandedIndex ? null : index)}>
-                            <Text style={styles.feedbackToggle}>Feedback {expandedIndex === index ? '▲' : '▼'}</Text>
+                            <Text style={styles.feedbackToggle}>Feedback {expandedIndex === index ?     <Ionicons name="chevron-down-outline" size={15} color={''} /> :     <Ionicons name="chevron-up-outline" size={15} color={''} />}</Text>
                         </TouchableOpacity>
                         {expandedIndex === index && (
                             <Text style={styles.feedback}>{entry.feedback || 'No feedback provided'}</Text>
@@ -74,5 +75,6 @@ const styles = StyleSheet.create({
     time: { fontWeight: 'bold' },
     feedbackToggle: { color: '#007AFF', fontSize: 14 },
     feedback: { marginTop: 6, fontSize: 14, color: '#333' },
-    loading: { marginTop: 50, textAlign: 'center', color: '#888' },
+    loading: { marginTop: 50, textAlign: 'center', color: '#888' }
 });
+
